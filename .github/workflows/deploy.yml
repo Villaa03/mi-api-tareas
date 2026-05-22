@@ -1,0 +1,40 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar pruebas
+        run: python -m pytest tests/ -v
+
+      - name: Generar paquete de despliegue
+        run: zip -r deploy.zip . -x "*.git*" -x "__pycache__/*" -x "*.pyc"
+
+      - name: Desplegar a Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          region: us-east-1
+          application_name: mi-api-tareas
+          environment_name: mi-api-tareas-env
+          version_label: ${{ github.sha }}
+          deployment_package: deploy.zip
